@@ -2,13 +2,6 @@
 
 MongoDB Sharded Cluster 自動化健康檢查工具。收集叢集快照、透過 Gemini AI 分析、推送結果到 Slack。
 
-## 架構
-
-```
-snapshot.py → analyze.py → notify.py → Slack
-  收集快照       AI 分析      推送通知
-```
-
 ## 快速開始
 
 ### Docker（推薦）
@@ -20,22 +13,24 @@ snapshot.py → analyze.py → notify.py → Slack
 docker run --rm -v ./config.json:/app/config.json tqsmm628/mongodb-health
 ```
 
-自訂分析 prompt（覆蓋內建的通用版）：
+### Docker Compose
 
-```bash
-docker run --rm \
-  -v ./config.json:/app/config.json \
-  -v ./analyze.md:/app/prompts/analyze.md \
-  tqsmm628/mongodb-health
+建立 `compose.yaml`：
+
+```yaml
+services:
+  health:
+    image: tqsmm628/mongodb-health
+    volumes:
+      - ./config.json:/app/config.json
+      - ./analyze.md:/app/prompts/analyze.md  # 選填：自訂分析 prompt
 ```
 
-指定叢集：
+執行：
 
 ```bash
-docker run --rm -v ./config.json:/app/config.json tqsmm628/mongodb-health --cluster mongodb-new
+docker compose run --rm health
 ```
-
-> **Windows PowerShell** 使用 `${PWD}\config.json` 取代 `./config.json`
 
 ### 本地執行
 
@@ -43,6 +38,8 @@ docker run --rm -v ./config.json:/app/config.json tqsmm628/mongodb-health --clus
 pip install -r requirements.txt
 python snapshot.py -q --compact | python analyze.py | python notify.py
 ```
+
+> **Windows PowerShell** volume mount 使用 `${PWD}\config.json` 取代 `./config.json`
 
 ## 設定
 
@@ -69,6 +66,19 @@ python snapshot.py -q --compact | python analyze.py | python notify.py
 | `slack_webhook` | ✅ | [Slack Apps](https://api.slack.com/apps) → Incoming Webhooks |
 | `clusters[].context` | ❌ | 環境說明，AI 分析時會參考 |
 
+## 自訂分析 Prompt
+
+Image 內建通用版 `prompts/analyze.md`，適用大多數 MongoDB sharded cluster。
+
+如需加入環境專屬背景（如業務流量模式、架構限制），建立自訂 `analyze.md` 並透過 volume 覆蓋：
+
+```bash
+docker run --rm \
+  -v ./config.json:/app/config.json \
+  -v ./analyze.md:/app/prompts/analyze.md \
+  tqsmm628/mongodb-health
+```
+
 ## 各元件說明
 
 | 檔案 | 用途 | 可獨立使用 |
@@ -76,28 +86,30 @@ python snapshot.py -q --compact | python analyze.py | python notify.py
 | `snapshot.py` | 連接 MongoDB 收集健康快照（JSON） | ✅ |
 | `analyze.py` | 將快照送 Gemini API 產生分析報告 | ✅ |
 | `notify.py` | 將文字推送到 Slack | ✅ |
-| `prompts/analyze.md` | AI 分析的 prompt | - |
+| `run.sh` | 串接三個元件的 pipeline | - |
+| `prompts/analyze.md` | AI 分析的 prompt（通用版） | - |
 
 ### snapshot.py
 
 ```bash
-python snapshot.py -q --compact                    # 全部叢集
+python snapshot.py -q --compact                       # 全部叢集
 python snapshot.py -q --compact --cluster my-cluster  # 指定叢集
-python snapshot.py -o snapshot.json                # 輸出到檔案
+python snapshot.py -o snapshot.json                   # 輸出到檔案
 ```
 
 ### analyze.py
 
 ```bash
-echo '{"clusters":{...}}' | python analyze.py              # 從 config.json 讀 API key
-echo '{"clusters":{...}}' | python analyze.py --model gemini-2.5-pro  # 指定模型
+cat snapshot.json | python analyze.py                        # 從 config.json 讀 API key
+cat snapshot.json | python analyze.py --model gemini-2.5-pro # 指定模型
 ```
 
 ### notify.py
 
 ```bash
-echo "Hello" | python notify.py                            # 從 config.json 讀 webhook
-echo "Hello" | python notify.py --webhook "https://..."    # 指定 webhook URL
+echo "Hello" | python notify.py                          # 從 config.json 讀 webhook
+echo "Hello" | python notify.py --title "mongodb-new"    # 加標題
+echo "Hello" | python notify.py --webhook "https://..."  # 指定 webhook URL
 ```
 
 ## 監控項目

@@ -80,6 +80,7 @@ def send_to_slack(webhook_url, text):
 def main():
     parser = argparse.ArgumentParser(description="Send stdin to Slack webhook")
     parser.add_argument("--webhook", help="Slack Incoming Webhook URL")
+    parser.add_argument("--title", help="Title prepended to the message")
     args = parser.parse_args()
 
     # 讀取 stdin
@@ -99,6 +100,10 @@ def main():
         print("Error: no webhook URL found.", file=sys.stderr)
         print("  用 --webhook 參數、SLACK_WEBHOOK_URL 環境變數、或 config.json 的 slack_webhook 欄位設定", file=sys.stderr)
         sys.exit(1)
+
+    # 加標題
+    if args.title:
+        text = f"## {args.title}\n\n{text}"
 
     # 轉換格式並送出
     slack_text = md_to_slack(text)

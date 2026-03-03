@@ -1,4 +1,5 @@
 config.json
 *.json
 !config.example.json
+.env
 __pycache__/
