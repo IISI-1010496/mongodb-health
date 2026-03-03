@@ -1,0 +1,15 @@
+{
+  "clusters": [
+    {
+      "name": "mongodb-new",
+      "uri": "mongodb://user:password@host:27017/admin?authSource=admin",
+      "context": "選填。給 AI 的環境說明，會寫入 snapshot JSON 中。"
+    },
+    {
+      "name": "mongodb-old",
+      "uri": "mongodb://user:password@host2:27017/admin?authSource=admin"
+    }
+  ],
+  "gemini_api_key": "YOUR_GEMINI_API_KEY",
+  "slack_webhook": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+}
